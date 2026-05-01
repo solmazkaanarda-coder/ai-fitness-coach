@@ -1,98 +1,321 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import React, { useState } from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [screen, setScreen] = useState("welcome");
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [goal, setGoal] = useState("Fat Loss");
+  const [plan, setPlan] = useState("Free");
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  if (screen === "welcome") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.pageBetween}>
+          <View>
+            <Text style={styles.logoBlue}>AI</Text>
+            <Text style={styles.logo}>FITNESS COACH</Text>
+            <Text style={styles.title}>Your body transformation starts here.</Text>
+            <Text style={styles.subtitle}>
+              Personalized fitness plans, smart coaching, water tracking and progress insights.
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("account")}>
+            <Text style={styles.primaryText}>Get Started</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "account") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.page}>
+          <Text style={styles.header}>Create Account</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            placeholderTextColor="#8A92A6"
+            value={name}
+            onChangeText={setName}
+          />
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("body")}>
+            <Text style={styles.primaryText}>Continue</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "body") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.page}>
+          <Text style={styles.header}>Body Profile</Text>
+
+          <TextInput style={styles.input} placeholder="Age" placeholderTextColor="#8A92A6" value={age} onChangeText={setAge} />
+          <TextInput style={styles.input} placeholder="Height (cm)" placeholderTextColor="#8A92A6" value={height} onChangeText={setHeight} />
+          <TextInput style={styles.input} placeholder="Weight (kg)" placeholderTextColor="#8A92A6" value={weight} onChangeText={setWeight} />
+
+          <Text style={styles.sectionTitle}>Goal</Text>
+
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={[styles.choice, goal === "Fat Loss" && styles.choiceActive]}
+              onPress={() => setGoal("Fat Loss")}
+            >
+              <Text style={styles.choiceText}>Fat Loss</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.choice, goal === "Muscle Gain" && styles.choiceActive]}
+              onPress={() => setGoal("Muscle Gain")}
+            >
+              <Text style={styles.choiceText}>Muscle Gain</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("plan")}>
+            <Text style={styles.primaryText}>Create Plan</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "plan") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.page}>
+          <Text style={styles.header}>Choose Your Plan</Text>
+
+          <TouchableOpacity style={[styles.planCard, plan === "Free" && styles.planActive]} onPress={() => setPlan("Free")}>
+            <Text style={styles.planTitle}>Free</Text>
+            <Text style={styles.planText}>Basic dashboard, daily goals, water tracking.</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.planCard, plan === "Premium" && styles.planActive]} onPress={() => setPlan("Premium")}>
+            <Text style={styles.planTitle}>Premium</Text>
+            <Text style={styles.planText}>AI coach, video analysis, progress insights, advanced plans.</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("dashboard")}>
+            <Text style={styles.primaryText}>Go to Dashboard</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.page}>
+        <Text style={styles.header}>Hello, {name || "Athlete"} 👋</Text>
+        <Text style={styles.subtitle}>Today is a strong day. Keep moving.</Text>
+
+        <View style={styles.grid}>
+          <StatCard title="Calories" value="1750 / 2200" />
+          <StatCard title="Protein" value="120 / 150g" />
+          <StatCard title="Water" value="1.6 / 3L" />
+          <StatCard title="Steps" value="8432 / 10000" />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Your Goal</Text>
+          <Text style={styles.cardText}>{goal}</Text>
+          <Text style={styles.cardText}>Plan: {plan}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>AI Coach</Text>
+          <Text style={styles.cardText}>
+            Great start. Stay consistent, hit your protein goal and drink more water today.
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function StatCard({ title, value }) {
+  return (
+    <View style={styles.statCard}>
+      <Text style={styles.statTitle}>{title}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  safe: {
+    flex: 1,
+    backgroundColor: "#05070D",
   },
-  stepContainer: {
-    gap: 8,
+  page: {
+    flexGrow: 1,
+    padding: 24,
+    justifyContent: "center",
+  },
+  pageBetween: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "space-between",
+  },
+  logoBlue: {
+    color: "#2F9BFF",
+    fontSize: 48,
+    fontWeight: "900",
+  },
+  logo: {
+    color: "#FFFFFF",
+    fontSize: 42,
+    fontWeight: "900",
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 30,
+    fontWeight: "800",
+    marginTop: 50,
+  },
+  subtitle: {
+    color: "#9EA7B8",
+    fontSize: 17,
+    lineHeight: 26,
+    marginTop: 14,
+  },
+  header: {
+    color: "#FFFFFF",
+    fontSize: 30,
+    fontWeight: "800",
+    marginBottom: 24,
+  },
+  input: {
+    backgroundColor: "#121826",
+    color: "#FFFFFF",
+    padding: 18,
+    borderRadius: 16,
+    marginBottom: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#232B3B",
+  },
+  primaryButton: {
+    backgroundColor: "#2F9BFF",
+    padding: 18,
+    borderRadius: 18,
+    alignItems: "center",
+    marginTop: 18,
+  },
+  primaryText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  sectionTitle: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "800",
+    marginTop: 10,
+    marginBottom: 12,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  choice: {
+    flex: 1,
+    backgroundColor: "#121826",
+    padding: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#232B3B",
+  },
+  choiceActive: {
+    borderColor: "#2F9BFF",
+    backgroundColor: "#10253D",
+  },
+  choiceText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  planCard: {
+    backgroundColor: "#121826",
+    padding: 20,
+    borderRadius: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#232B3B",
+  },
+  planActive: {
+    borderColor: "#2F9BFF",
+  },
+  planTitle: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "900",
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  planText: {
+    color: "#9EA7B8",
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 20,
+  },
+  statCard: {
+    width: "48%",
+    backgroundColor: "#121826",
+    padding: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#232B3B",
+  },
+  statTitle: {
+    color: "#9EA7B8",
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  statValue: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  card: {
+    backgroundColor: "#121826",
+    padding: 20,
+    borderRadius: 18,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: "#232B3B",
+  },
+  cardTitle: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 8,
+  },
+  cardText: {
+    color: "#9EA7B8",
+    fontSize: 16,
+    lineHeight: 24,
   },
 });
