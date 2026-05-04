@@ -460,7 +460,9 @@ export default function HomeScreen() {
       setWaterMl(0);
       setScreen("theme");
     } catch (error) {
-      console.log("Create plan failed:", error);
+  console.log("Create plan failed:", error);
+  Alert.alert("Backend Error", JSON.stringify(error));
+
     }
   };
 
