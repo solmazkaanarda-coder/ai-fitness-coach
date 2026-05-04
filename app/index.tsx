@@ -301,6 +301,7 @@ export default function HomeScreen() {
   const [screen, setScreen] = useState<Screen>("welcome");
   const [lang, setLang] = useState<Language>("tr");
   const t = L[lang];
+  const { theme, themeName, setThemeName } = useAppTheme();
 
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [analysisPhoto, setAnalysisPhoto] = useState<string | null>(null);
@@ -708,8 +709,7 @@ export default function HomeScreen() {
   }
   
   if (screen === "theme") {
-  const { theme, themeName, setThemeName } = useAppTheme();
-
+  
   const themeOptions = [
     { name: "aquaCore", label: "Aqua Core", desc: "Clean blue health-tech look" },
     { name: "sandElite", label: "Sand Elite", desc: "Warm beige premium wellness" },
