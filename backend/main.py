@@ -1,8 +1,21 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://glittery-ganache-0d5695.netlify.app",
+        "http://localhost:8081",
+        "http://localhost:8082",
+        "http://localhost:19006",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 memory = {
     "language": "tr",
@@ -298,4 +311,4 @@ def analyze(data: AnalysisRequest):
         memory["video_analysis"].append(result)
         return result
 
-    return {"allowed": False, "message": "Unsupported media type"}
+    return {"allowed": False, "message": "Unknown media type"}

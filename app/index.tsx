@@ -337,22 +337,40 @@ export default function HomeScreen() {
   const [progressLogs, setProgressLogs] = useState<any[]>([]);
 
   const [analysisResult, setAnalysisResult] = useState<any>(null);
+  
+const post = async (endpoint: string, body: any) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 35000);
 
-  const post = async (endpoint: string, body: any) => {
+  try {
     const res = await fetch(`${API_URL}${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeout);
+
+    const responseText = await res.text();
+
     if (!res.ok) {
-      const errorText = await res.text();
-      console.log("Backend error:", endpoint, res.status, errorText);
-      throw new Error(errorText || `HTTP ${res.status}`);
+      console.log("Backend error:", endpoint, res.status, responseText);
+      throw new Error(responseText || `HTTP ${res.status}`);
     }
 
-    return await res.json();
-  };
+    return JSON.parse(responseText);
+  } catch (err: any) {
+    clearTimeout(timeout);
+
+    if (err?.name === "AbortError") {
+      throw new Error("Backend yanıt vermedi. Render uyanıyor olabilir. 30 saniye bekleyip tekrar dene.");
+    }
+
+    console.log("Fetch exception:", endpoint, err?.message);
+    throw err;
+  }
+};
 
   const get = async (endpoint: string) => {
     const res = await fetch(`${API_URL}${endpoint}`);
@@ -441,29 +459,42 @@ export default function HomeScreen() {
     Alert.alert("Face ID", result.success ? t.active : t.off);
   };
 
-  const createPlan = async () => {
+    const createPlan = async () => {
     try {
-      const data = await post("/create-plan", {
+      const payload = {
         name: name || "Athlete",
-        email,
-        phone,
-        age: Number(age || 25),
-        gender,
-        height: Number(height || 175),
-        weight: Number(weight || 80),
-        goal,
-        activity_level: activityLevel,
-        plan,
-        step_goal: stepGoal,
-      });
+        email: email || "",
+        phone: phone || "",
+        age: parseInt(age) || 25,
+        gender: gender || "Male",
+        height: parseFloat(height) || 175,
+        weight: parseFloat(weight) || 80,
+        goal: goal || "Fat Loss",
+        activity_level: activityLevel || "moderate",
+        plan: plan || "Free",
+        step_goal: stepGoal || 8000,
+      };
+
+      console.log("Sending payload:", JSON.stringify(payload));
+
+      const data = await post("/create-plan", payload);
+
+      console.log("Plan created:", JSON.stringify(data));
 
       setDashboard(data);
       setWaterMl(0);
       setScreen("theme");
-    } catch (error) {
-  console.log("Create plan failed:", error);
-  Alert.alert("Backend Error", JSON.stringify(error));
 
+    } catch (error: any) {
+      console.log("Create plan failed:", error?.message);
+
+      Alert.alert(
+        "Bağlantı Hatası",
+        error?.message?.includes("Render uyanıyor")
+          ? "Backend uyanıyor olabilir. 30 saniye bekleyip tekrar dene."
+          : error?.message || "Bilinmeyen hata",
+        [{ text: "Tamam" }]
+      );
     }
   };
 
@@ -475,6 +506,8 @@ export default function HomeScreen() {
       setWaterMl((prev) => prev + amount);
     }
   };
+
+
 
   const sendChat = async () => {
     if (!chatInput.trim()) return;
