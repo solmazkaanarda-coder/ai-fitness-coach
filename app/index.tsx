@@ -1,3 +1,5 @@
+import { useAppTheme } from "@/src/theme/ThemeContext";
+import { ThemeName } from "@/src/theme/themes";
 import Slider from "@react-native-community/slider";
 import * as ImagePicker from "expo-image-picker";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -14,7 +16,7 @@ import {
   View,
 } from "react-native";
 
-const API_URL = "http://192.168.1.9:8000";
+const API_URL = "https://ai-fitness-backend-o5h1.onrender.com";
 
 type Screen =
   | "welcome"
@@ -22,6 +24,7 @@ type Screen =
   | "personal"
   | "security"
   | "plan"
+  | "theme"
   | "dashboard"
   | "water"
   | "coach"
@@ -340,7 +343,24 @@ export default function HomeScreen() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    return res.json();
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log("Backend error:", endpoint, res.status, errorText);
+      throw new Error(errorText || `HTTP ${res.status}`);
+    }
+
+    return await res.json();
+  };
+
+  const get = async (endpoint: string) => {
+    const res = await fetch(`${API_URL}${endpoint}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log("Backend GET error:", endpoint, res.status, errorText);
+      throw new Error(errorText || `HTTP ${res.status}`);
+    }
+    return await res.json();
   };
 
   const changeLang = async (next: Language) => {
@@ -372,7 +392,12 @@ export default function HomeScreen() {
 
     if (!result.canceled) {
       setAnalysisPhoto(result.assets[0].uri);
-      const data = await post("/analyze", { media_type: "photo", plan, language: lang });
+      const data = await post("/analyze", {
+        media_type: "photo",
+        plan,
+        language: lang,
+        note: "photo analysis",
+      });
       setAnalysisResult(data);
     }
   };
@@ -385,7 +410,12 @@ export default function HomeScreen() {
 
     if (!result.canceled) {
       setAnalysisVideo(result.assets[0].uri);
-      const data = await post("/analyze", { media_type: "video", plan, language: lang });
+      const data = await post("/analyze", {
+        media_type: "video",
+        plan,
+        language: lang,
+        note: "video analysis",
+      });
       setAnalysisResult(data);
     }
   };
@@ -428,9 +458,9 @@ export default function HomeScreen() {
 
       setDashboard(data);
       setWaterMl(0);
-      setScreen("dashboard");
-    } catch {
-      Alert.alert("Backend", "Python backend bağlantısı kurulamadı.");
+      setScreen("theme");
+    } catch (error) {
+      console.log("Create plan failed:", error);
     }
   };
 
@@ -452,8 +482,9 @@ export default function HomeScreen() {
     try {
       const data = await post("/chat", { message: userMsg, language: lang });
       setMessages((prev) => [...prev, { from: "coach", text: data.reply }]);
-    } catch {
-      setMessages((prev) => [...prev, { from: "coach", text: "Backend connection failed." }]);
+    } catch (error) {
+      console.log("Chat request failed:", error);
+      setMessages((prev) => [...prev, { from: "coach", text: "..." }]);
     }
   };
 
@@ -673,6 +704,72 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
+  
+  if (screen === "theme") {
+  const { theme, themeName, setThemeName } = useAppTheme();
+
+  const themeOptions = [
+    { name: "aquaCore", label: "Aqua Core", desc: "Clean blue health-tech look" },
+    { name: "sandElite", label: "Sand Elite", desc: "Warm beige premium wellness" },
+    { name: "darkFuture", label: "Dark Future", desc: "Futuristic black-orange look" },
+    { name: "roseGlow", label: "Rose Glow", desc: "Soft pink premium lifestyle" },
+  ];
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <ScrollView contentContainerStyle={styles.page}>
+        <Text style={[styles.header, { color: theme.text }]}>
+          Theme Selection
+        </Text>
+
+        {themeOptions.map((item) => {
+          const isSelected = themeName === item.name;
+
+          return (
+            <TouchableOpacity
+              key={item.name}
+              onPress={() => setThemeName(item.name as ThemeName)}
+              style={[
+                styles.planCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: isSelected ? theme.primary : "transparent",
+                  borderWidth: 2,
+                },
+              ]}
+            >
+              <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>
+                {item.label}
+              </Text>
+
+              <Text style={{ color: theme.mutedText, marginTop: 4 }}>
+                {item.desc}
+              </Text>
+
+              <View
+                style={{
+                  marginTop: 10,
+                  height: 8,
+                  borderRadius: 8,
+                  backgroundColor: theme.primary,
+                  width: "60%",
+                }}
+              />
+            </TouchableOpacity>
+          );
+        })}
+
+        <TouchableOpacity
+          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+          onPress={() => setScreen("dashboard")}
+        >
+          <Text style={styles.primaryText}>Continue</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
 
   if (screen === "dashboard") {
     return (

@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 
-const API_URL = "http://192.168.1.9:8000";
+const API_URL = "https://ai-fitness-backend-o5h1.onrender.com";
 
 type Screen =
   | "welcome"
@@ -336,7 +336,6 @@ export default function HomeScreen() {
   const [progressLogs, setProgressLogs] = useState<any[]>([]);
 
   const [analysisResult, setAnalysisResult] = useState<any>(null);
-  const API_URL = "http://192.168.1.9:80001";
 
   const post = async (endpoint: string, body: any) => {
     const res = await fetch(`${API_URL}${endpoint}`, {
@@ -344,7 +343,24 @@ export default function HomeScreen() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    return res.json();
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log("Backend error:", endpoint, res.status, errorText);
+      throw new Error(errorText || `HTTP ${res.status}`);
+    }
+
+    return await res.json();
+  };
+
+  const get = async (endpoint: string) => {
+    const res = await fetch(`${API_URL}${endpoint}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log("Backend GET error:", endpoint, res.status, errorText);
+      throw new Error(errorText || `HTTP ${res.status}`);
+    }
+    return await res.json();
   };
 
   const changeLang = async (next: Language) => {
@@ -376,7 +392,12 @@ export default function HomeScreen() {
 
     if (!result.canceled) {
       setAnalysisPhoto(result.assets[0].uri);
-      const data = await post("/analyze", { media_type: "photo", plan, language: lang });
+      const data = await post("/analyze", {
+        media_type: "photo",
+        plan,
+        language: lang,
+        note: "photo analysis",
+      });
       setAnalysisResult(data);
     }
   };
@@ -389,7 +410,12 @@ export default function HomeScreen() {
 
     if (!result.canceled) {
       setAnalysisVideo(result.assets[0].uri);
-      const data = await post("/analyze", { media_type: "video", plan, language: lang });
+      const data = await post("/analyze", {
+        media_type: "video",
+        plan,
+        language: lang,
+        note: "video analysis",
+      });
       setAnalysisResult(data);
     }
   };
@@ -433,27 +459,10 @@ export default function HomeScreen() {
       setDashboard(data);
       setWaterMl(0);
       setScreen("theme");
-     } catch {
-  const fallbackData = {
-    calories: 2200,
-    protein: 160,
-    water_ml: 2500,
-    steps: stepGoal || 8000,
-    name: name || "Athlete",
-    goal,
-    plan,
+    } catch (error) {
+      console.log("Create plan failed:", error);
+    }
   };
-
-  setDashboard(fallbackData as any);
-setWaterMl(0);
-
-Alert.alert(
-  "Demo Mode",
-  "Backend connection failed, continuing with demo data.",
-  [{ text: "OK", onPress: () => setScreen("theme") }]
-);
-}
-};
 
   const addWater = async (amount: number) => {
     try {
@@ -473,8 +482,9 @@ Alert.alert(
     try {
       const data = await post("/chat", { message: userMsg, language: lang });
       setMessages((prev) => [...prev, { from: "coach", text: data.reply }]);
-    } catch {
-      setMessages((prev) => [...prev, { from: "coach", text: "Backend connection failed." }]);
+    } catch (error) {
+      console.log("Chat request failed:", error);
+      setMessages((prev) => [...prev, { from: "coach", text: "..." }]);
     }
   };
 
