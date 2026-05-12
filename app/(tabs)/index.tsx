@@ -325,6 +325,8 @@ export default function HomeScreen() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [waterMl, setWaterMl] = useState(0);
 
+  const [isBackendLoading, setIsBackendLoading] = useState(false);
+
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<any[]>([
     { from: "coach", text: "Merhaba! Beslenme, su, adım, antrenman veya ilerleme hakkında yazabilirsin." },
@@ -338,37 +340,85 @@ export default function HomeScreen() {
 
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   
-const post = async (endpoint: string, body: any) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 35000);
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const wakeBackend = async () => {
   try {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+
+    const res = await fetch(`${API_URL}/health`, {
+      method: "GET",
       signal: controller.signal,
     });
 
     clearTimeout(timeout);
 
-    const responseText = await res.text();
-
     if (!res.ok) {
-      console.log("Backend error:", endpoint, res.status, responseText);
-      throw new Error(responseText || `HTTP ${res.status}`);
+      throw new Error("Backend health check failed");
     }
 
-    return JSON.parse(responseText);
+    return true;
+  } catch (error) {
+    console.log("Wake backend failed:", error);
+    return false;
+  }
+};
+
+const post = async (endpoint: string, body: any, retries = 2) => {
+  setIsBackendLoading(true);
+
+  try {
+    let backendReady = await wakeBackend();
+
+    if (!backendReady) {
+      await wait(8000);
+      backendReady = await wakeBackend();
+    }
+
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= retries + 1; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 45000);
+
+        const res = await fetch(`${API_URL}${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        const responseText = await res.text();
+
+        if (!res.ok) {
+          console.log("Backend error:", endpoint, res.status, responseText);
+          throw new Error(responseText || `HTTP ${res.status}`);
+        }
+
+        return JSON.parse(responseText);
+      } catch (err: any) {
+        lastError = err;
+        console.log(`POST attempt ${attempt} failed:`, err?.message);
+
+        if (attempt <= retries) {
+          await wait(5000);
+        }
+      }
+    }
+
+    throw lastError;
   } catch (err: any) {
-    clearTimeout(timeout);
-
     if (err?.name === "AbortError") {
-      throw new Error("Backend yanıt vermedi. Render uyanıyor olabilir. 30 saniye bekleyip tekrar dene.");
+      throw new Error("Backend responded too slowly. Please try again.");
     }
 
-    console.log("Fetch exception:", endpoint, err?.message);
-    throw err;
+    throw new Error(err?.message || "Backend connection error.");
+  } finally {
+    setIsBackendLoading(false);
   }
 };
 
@@ -733,8 +783,14 @@ const post = async (endpoint: string, body: any) => {
             <Text style={styles.price}>{t.price}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={createPlan}>
-            <Text style={styles.primaryText}>{t.createPlan}</Text>
+          <TouchableOpacity
+            style={[styles.primaryButton, isBackendLoading && { opacity: 0.6 }]}
+            onPress={createPlan}
+            disabled={isBackendLoading}
+          >
+            <Text style={styles.primaryText}>
+              {isBackendLoading ? "Preparing your personal plan..." : t.createPlan}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>

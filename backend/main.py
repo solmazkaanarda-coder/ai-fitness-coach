@@ -81,6 +81,14 @@ def home():
         "language": memory["language"]
     }
 
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "message": "Backend is awake",
+        "time": datetime.now().isoformat()
+    }
+
 @app.post("/language")
 def update_language(data: LanguageUpdate):
     allowed = ["tr", "en", "de", "ru"]
