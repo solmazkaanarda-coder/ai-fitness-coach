@@ -159,7 +159,7 @@ const L = {
     videoAnalysis: "Video Form Analysis",
     photoText: "Upload a photo and get body fat estimate and advice.",
     videoText: "Upload a video and get form score and technique advice.",
-    todayRecord: "Today’s Log",
+    todayRecord: "Today's Log",
     bodyFat: "Body fat (%)",
     note: "Note",
     save: "Save",
@@ -322,8 +322,10 @@ export default function HomeScreen() {
   const [faceEnabled, setFaceEnabled] = useState(false);
   const [pin, setPin] = useState("");
 
+  // CHANGE 1: Added isBackendLoading state (single instance)
   const [dashboard, setDashboard] = useState<any>(null);
   const [waterMl, setWaterMl] = useState(0);
+  const [isBackendLoading, setIsBackendLoading] = useState(false);
 
   const [chatInput, setChatInput] = useState("");
   const [messages, setMessages] = useState<any[]>([
@@ -337,40 +339,89 @@ export default function HomeScreen() {
   const [progressLogs, setProgressLogs] = useState<any[]>([]);
 
   const [analysisResult, setAnalysisResult] = useState<any>(null);
-  
-const post = async (endpoint: string, body: any) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 35000);
 
-  try {
-    const res = await fetch(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+  // CHANGE 2: Replaced post() with wait + wakeBackend + new post() (single instances)
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    clearTimeout(timeout);
+  const wakeBackend = async () => {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
 
-    const responseText = await res.text();
+      const res = await fetch(`${API_URL}/health`, {
+        method: "GET",
+        signal: controller.signal,
+      });
 
-    if (!res.ok) {
-      console.log("Backend error:", endpoint, res.status, responseText);
-      throw new Error(responseText || `HTTP ${res.status}`);
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        throw new Error("Backend health check failed");
+      }
+
+      return true;
+    } catch (error) {
+      console.log("Wake backend failed:", error);
+      return false;
     }
+  };
 
-    return JSON.parse(responseText);
-  } catch (err: any) {
-    clearTimeout(timeout);
+  const post = async (endpoint: string, body: any, retries = 2) => {
+    setIsBackendLoading(true);
 
-    if (err?.name === "AbortError") {
-      throw new Error("Backend yanıt vermedi. Render uyanıyor olabilir. 30 saniye bekleyip tekrar dene.");
+    try {
+      let backendReady = await wakeBackend();
+
+      if (!backendReady) {
+        await wait(8000);
+        backendReady = await wakeBackend();
+      }
+
+      let lastError: any = null;
+
+      for (let attempt = 1; attempt <= retries + 1; attempt++) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 45000);
+
+          const res = await fetch(`${API_URL}${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeout);
+
+          const responseText = await res.text();
+
+          if (!res.ok) {
+            console.log("Backend error:", endpoint, res.status, responseText);
+            throw new Error(responseText || `HTTP ${res.status}`);
+          }
+
+          return JSON.parse(responseText);
+        } catch (err: any) {
+          lastError = err;
+          console.log(`POST attempt ${attempt} failed:`, err?.message);
+
+          if (attempt <= retries) {
+            await wait(5000);
+          }
+        }
+      }
+
+      throw lastError;
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        throw new Error("Backend responded too slowly. Please try again.");
+      }
+
+      throw new Error(err?.message || "Backend connection error.");
+    } finally {
+      setIsBackendLoading(false);
     }
-
-    console.log("Fetch exception:", endpoint, err?.message);
-    throw err;
-  }
-};
+  };
 
   const get = async (endpoint: string) => {
     const res = await fetch(`${API_URL}${endpoint}`);
@@ -459,7 +510,7 @@ const post = async (endpoint: string, body: any) => {
     Alert.alert("Face ID", result.success ? t.active : t.off);
   };
 
-    const createPlan = async () => {
+  const createPlan = async () => {
     try {
       const payload = {
         name: name || "Athlete",
@@ -490,9 +541,7 @@ const post = async (endpoint: string, body: any) => {
 
       Alert.alert(
         "Bağlantı Hatası",
-        error?.message?.includes("Render uyanıyor")
-          ? "Backend uyanıyor olabilir. 30 saniye bekleyip tekrar dene."
-          : error?.message || "Bilinmeyen hata",
+        error?.message || "Bilinmeyen hata",
         [{ text: "Tamam" }]
       );
     }
@@ -506,8 +555,6 @@ const post = async (endpoint: string, body: any) => {
       setWaterMl((prev) => prev + amount);
     }
   };
-
-
 
   const sendChat = async () => {
     if (!chatInput.trim()) return;
@@ -733,78 +780,83 @@ const post = async (endpoint: string, body: any) => {
             <Text style={styles.price}>{t.price}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={createPlan}>
-            <Text style={styles.primaryText}>{t.createPlan}</Text>
+          {/* CHANGE 3: Plan button with loading state */}
+          <TouchableOpacity
+            style={[styles.primaryButton, isBackendLoading && { opacity: 0.6 }]}
+            onPress={createPlan}
+            disabled={isBackendLoading}
+          >
+            <Text style={styles.primaryText}>
+              {isBackendLoading ? "Preparing your personal plan..." : t.createPlan}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     );
   }
-  
+
   if (screen === "theme") {
-  
-  const themeOptions = [
-    { name: "aquaCore", label: "Aqua Core", desc: "Clean blue health-tech look" },
-    { name: "sandElite", label: "Sand Elite", desc: "Warm beige premium wellness" },
-    { name: "darkFuture", label: "Dark Future", desc: "Futuristic black-orange look" },
-    { name: "roseGlow", label: "Rose Glow", desc: "Soft pink premium lifestyle" },
-  ];
+    const themeOptions = [
+      { name: "aquaCore", label: "Aqua Core", desc: "Clean blue health-tech look" },
+      { name: "sandElite", label: "Sand Elite", desc: "Warm beige premium wellness" },
+      { name: "darkFuture", label: "Dark Future", desc: "Futuristic black-orange look" },
+      { name: "roseGlow", label: "Rose Glow", desc: "Soft pink premium lifestyle" },
+    ];
 
-  return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <Text style={[styles.header, { color: theme.text }]}>
-          Theme Selection
-        </Text>
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <ScrollView contentContainerStyle={styles.page}>
+          <Text style={[styles.header, { color: theme.text }]}>
+            Theme Selection
+          </Text>
 
-        {themeOptions.map((item) => {
-          const isSelected = themeName === item.name;
+          {themeOptions.map((item) => {
+            const isSelected = themeName === item.name;
 
-          return (
-            <TouchableOpacity
-              key={item.name}
-              onPress={() => setThemeName(item.name as ThemeName)}
-              style={[
-                styles.planCard,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: isSelected ? theme.primary : "transparent",
-                  borderWidth: 2,
-                },
-              ]}
-            >
-              <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>
-                {item.label}
-              </Text>
+            return (
+              <TouchableOpacity
+                key={item.name}
+                onPress={() => setThemeName(item.name as ThemeName)}
+                style={[
+                  styles.planCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: isSelected ? theme.primary : "transparent",
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>
+                  {item.label}
+                </Text>
 
-              <Text style={{ color: theme.mutedText, marginTop: 4 }}>
-                {item.desc}
-              </Text>
+                <Text style={{ color: theme.mutedText, marginTop: 4 }}>
+                  {item.desc}
+                </Text>
 
-              <View
-                style={{
-                  marginTop: 10,
-                  height: 8,
-                  borderRadius: 8,
-                  backgroundColor: theme.primary,
-                  width: "60%",
-                }}
-              />
-            </TouchableOpacity>
-          );
-        })}
+                <View
+                  style={{
+                    marginTop: 10,
+                    height: 8,
+                    borderRadius: 8,
+                    backgroundColor: theme.primary,
+                    width: "60%",
+                  }}
+                />
+              </TouchableOpacity>
+            );
+          })}
 
-        <TouchableOpacity
-          style={[styles.primaryButton, { backgroundColor: theme.primary }]}
-          onPress={() => setScreen("dashboard")}
-        >
-          <Text style={styles.primaryText}>Continue</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+            onPress={() => setScreen("dashboard")}
+          >
+            <Text style={styles.primaryText}>Continue</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   if (screen === "dashboard") {
     return (
@@ -814,11 +866,31 @@ const post = async (endpoint: string, body: any) => {
           <Text style={styles.header}>{t.hello}, {dashboard?.name || name || "Athlete"} 👋</Text>
           <Text style={styles.subHeader}>{t.today}</Text>
 
+          {/* CHANGE 4: Updated dashboard grid */}
           <View style={styles.grid}>
-            <Stat title={t.calories} value={`${dashboard?.calories || 0} kcal`} />
-            <Stat title={t.protein} value={`${dashboard?.protein || 0} g`} />
-            <Stat title={t.water} value={`${(waterMl / 1000).toFixed(1)} / ${dashboard?.water_liters || 2.8} L`} />
-            <Stat title={t.steps} value={`${stepGoal}`} />
+            <Stat
+              title={t.calories}
+              value={dashboard?.calories ? `${dashboard.calories} kcal` : "Not calculated yet"}
+            />
+
+            <Stat
+              title={t.protein}
+              value={dashboard?.protein ? `${dashboard.protein} g` : "Not calculated yet"}
+            />
+
+            <Stat
+              title={t.water}
+              value={
+                dashboard?.water_liters
+                  ? `${(waterMl / 1000).toFixed(1)} / ${dashboard.water_liters} L`
+                  : "0.0 L"
+              }
+            />
+
+            <Stat
+              title={t.steps}
+              value={dashboard?.step_goal ? `0 / ${dashboard.step_goal}` : `0 / ${stepGoal}`}
+            />
           </View>
 
           <TouchableOpacity style={styles.actionCard} onPress={() => setScreen("progress")}>
@@ -837,7 +909,8 @@ const post = async (endpoint: string, body: any) => {
   }
 
   if (screen === "water") {
-    const targetMl = Math.round((dashboard?.water_liters || 2.8) * 1000);
+    // CHANGE 5: Updated water target to use water_target_ml if available
+    const targetMl = dashboard?.water_target_ml || Math.round((dashboard?.water_liters || 2.8) * 1000);
     const percent = Math.min(100, Math.round((waterMl / targetMl) * 100));
 
     return (
