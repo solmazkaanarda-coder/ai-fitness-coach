@@ -1,4 +1,5 @@
-import React, { createContext, ReactNode, useContext, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { AppTheme, ThemeName, THEMES } from './themes';
 
 type ThemeContextType = {
@@ -9,10 +10,49 @@ type ThemeContextType = {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [themeName, setThemeName] = useState<ThemeName>('darkFuture');
+const THEME_STORAGE_KEY = 'selectedTheme';
 
-  const theme = THEMES[themeName];
+export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [themeName, setThemeNameState] = useState<ThemeName>('aquaCore');
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadTheme = async () => {
+      try {
+        const storedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+
+        if (!mounted) return;
+
+        if (storedTheme && THEMES[storedTheme as ThemeName]) {
+          setThemeNameState(storedTheme as ThemeName);
+        } else {
+          setThemeNameState('aquaCore');
+          await AsyncStorage.setItem(THEME_STORAGE_KEY, 'aquaCore');
+        }
+      } catch (error) {
+        if (mounted) {
+          setThemeNameState('aquaCore');
+        }
+      }
+    };
+
+    loadTheme();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const setThemeName = async (name: ThemeName) => {
+    setThemeNameState(name);
+    try {
+      await AsyncStorage.setItem(THEME_STORAGE_KEY, name);
+    } catch {
+      // ignore storage write failure and keep in-memory theme
+    }
+  };
+
+  const theme = THEMES[themeName] ?? THEMES.aquaCore;
 
   return (
     <ThemeContext.Provider value={{ theme, themeName, setThemeName }}>
@@ -28,3 +68,5 @@ export const useAppTheme = () => {
   }
   return context;
 };
+
+export default ThemeContext;

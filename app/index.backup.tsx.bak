@@ -1,0 +1,1487 @@
+import { useAppTheme } from "@/src/theme/ThemeContext";
+import type { AppTheme } from "@/src/theme/themes";
+import { THEMES } from "@/src/theme/themes";
+import Slider from "@react-native-community/slider";
+import * as ImagePicker from "expo-image-picker";
+import * as LocalAuthentication from "expo-local-authentication";
+import React, { useState } from "react";
+import {
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+
+const API_URL = "http://192.168.1.9:8000";
+
+type Screen =
+  | "welcome"
+  | "account"
+  | "personal"
+  | "security"
+  | "plan"
+  | "theme"
+  | "dashboard"
+  | "water"
+  | "coach"
+  | "analysis"
+  | "progress"
+  | "profile";
+
+type Language = "tr" | "en" | "de" | "ru";
+
+const L = {
+  tr: {
+    start: "Hadi Başlayalım",
+    welcome1: "Senin için.",
+    welcome2: "Seninle birlikte.",
+    subtitle: "Kişiselleştirilmiş planlar, akıllı koç desteği ve ilerleme takibi.",
+    account: "Hesap Oluştur",
+    personal: "Kişisel Bilgiler",
+    security: "Güvenlik Ayarları",
+    plan: "Plan Seçimi",
+    dashboard: "Ana Sayfa",
+    water: "Su",
+    coach: "Koç",
+    analysis: "Analiz",
+    progress: "İlerleme",
+    profile: "Profil",
+    continue: "Devam Et",
+    back: "‹ Geri",
+    uploadPhoto: "Profil Fotoğrafı Yükle",
+    name: "Ad Soyad",
+    email: "E-posta",
+    phone: "Telefon Numarası",
+    age: "Yaş",
+    height: "Boy (cm)",
+    weight: "Kilo (kg)",
+    gender: "Cinsiyet",
+    male: "Erkek",
+    female: "Kadın",
+    goal: "Hedef",
+    fatLoss: "Yağ Kaybı",
+    muscleGain: "Kas Kazanımı",
+    activity: "Aktivite",
+    low: "Düşük",
+    moderate: "Orta",
+    high: "Yüksek",
+    faceTitle: "Face ID",
+    faceDesc: "Butona basınca cihaz doğrudan yüz doğrulaması isteyecek.",
+    enableFace: "Face ID ile doğrula",
+    active: "AKTİF",
+    off: "KAPALI",
+    pin: "4 Haneli PIN",
+    free: "Free",
+    premium: "Premium",
+    price: "249.99 TL / ay",
+    createPlan: "Planı Oluştur",
+    stepGoal: "Günlük Adım Hedefi",
+    hello: "Merhaba",
+    today: "Bugün harika bir gün, devam et.",
+    calories: "Kalori",
+    protein: "Protein",
+    steps: "Adım",
+    dailyRecord: "Süreç ve Günlük Kayıt",
+    dailyRecordText: "Kilo, yağ oranı, adım, su ve notlarını kaydet.",
+    add250: "+200 ml Su İçtim",
+    ask: "Bir şey sor...",
+    send: "Gönder",
+    photoAnalysis: "Foto Analizi",
+    videoAnalysis: "Video Form Analizi",
+    photoText: "Foto yükle, yağ oranı tahmini ve tavsiye al.",
+    videoText: "Video yükle, form skoru ve teknik tavsiye al.",
+    todayRecord: "Bugünkü Kayıt",
+    bodyFat: "Vücut yağ oranı (%)",
+    note: "Not",
+    save: "Kaydet",
+    noData: "Henüz veri yok. Kayıt girince burada görünecek.",
+  },
+  en: {
+    start: "Get Started",
+    welcome1: "For you.",
+    welcome2: "Together with you.",
+    subtitle: "Personalized plans, smart coaching and progress tracking.",
+    account: "Create Account",
+    personal: "Personal Info",
+    security: "Security Settings",
+    plan: "Choose Plan",
+    dashboard: "Home",
+    water: "Water",
+    coach: "Coach",
+    analysis: "Analysis",
+    progress: "Progress",
+    profile: "Profile",
+    continue: "Continue",
+    back: "‹ Back",
+    uploadPhoto: "Upload Profile Photo",
+    name: "Full Name",
+    email: "Email",
+    phone: "Phone Number",
+    age: "Age",
+    height: "Height (cm)",
+    weight: "Weight (kg)",
+    gender: "Gender",
+    male: "Male",
+    female: "Female",
+    goal: "Goal",
+    fatLoss: "Fat Loss",
+    muscleGain: "Muscle Gain",
+    activity: "Activity",
+    low: "Low",
+    moderate: "Moderate",
+    high: "High",
+    faceTitle: "Face ID",
+    faceDesc: "When you press the button, the device will request face authentication directly.",
+    enableFace: "Authenticate with Face ID",
+    active: "ON",
+    off: "OFF",
+    pin: "4 Digit PIN",
+    free: "Free",
+    premium: "Premium",
+    price: "249.99 TL / month",
+    createPlan: "Create Plan",
+    stepGoal: "Daily Step Goal",
+    hello: "Hello",
+    today: "Great day today, keep going.",
+    calories: "Calories",
+    protein: "Protein",
+    steps: "Steps",
+    dailyRecord: "Progress and Daily Log",
+    dailyRecordText: "Save weight, body fat, steps, water and notes.",
+    add250: "+200 ml Water",
+    ask: "Ask something...",
+    send: "Send",
+    photoAnalysis: "Photo Analysis",
+    videoAnalysis: "Video Form Analysis",
+    photoText: "Upload a photo and get body fat estimate and advice.",
+    videoText: "Upload a video and get form score and technique advice.",
+    todayRecord: "Today's Log",
+    bodyFat: "Body fat (%)",
+    note: "Note",
+    save: "Save",
+    noData: "No data yet. Your logs will appear here.",
+  },
+  de: {
+    start: "Loslegen",
+    welcome1: "Für dich.",
+    welcome2: "Mit dir zusammen.",
+    subtitle: "Personalisierte Pläne, smarter Coach und Fortschrittsverfolgung.",
+    account: "Konto erstellen",
+    personal: "Persönliche Daten",
+    security: "Sicherheit",
+    plan: "Plan wählen",
+    dashboard: "Startseite",
+    water: "Wasser",
+    coach: "Coach",
+    analysis: "Analyse",
+    progress: "Fortschritt",
+    profile: "Profil",
+    continue: "Weiter",
+    back: "‹ Zurück",
+    uploadPhoto: "Profilfoto hochladen",
+    name: "Vollständiger Name",
+    email: "E-Mail",
+    phone: "Telefonnummer",
+    age: "Alter",
+    height: "Größe (cm)",
+    weight: "Gewicht (kg)",
+    gender: "Geschlecht",
+    male: "Männlich",
+    female: "Weiblich",
+    goal: "Ziel",
+    fatLoss: "Fettabbau",
+    muscleGain: "Muskelaufbau",
+    activity: "Aktivität",
+    low: "Niedrig",
+    moderate: "Mittel",
+    high: "Hoch",
+    faceTitle: "Face ID",
+    faceDesc: "Beim Drücken wird direkt die Gesichtserkennung gestartet.",
+    enableFace: "Mit Face ID bestätigen",
+    active: "AN",
+    off: "AUS",
+    pin: "4-stellige PIN",
+    free: "Kostenlos",
+    premium: "Premium",
+    price: "249.99 TL / Monat",
+    createPlan: "Plan erstellen",
+    stepGoal: "Tägliches Schrittziel",
+    hello: "Hallo",
+    today: "Heute ist ein guter Tag, weiter so.",
+    calories: "Kalorien",
+    protein: "Protein",
+    steps: "Schritte",
+    dailyRecord: "Fortschritt und Tageslog",
+    dailyRecordText: "Gewicht, Körperfett, Schritte, Wasser und Notizen speichern.",
+    add250: "+200 ml Wasser",
+    ask: "Frag etwas...",
+    send: "Senden",
+    photoAnalysis: "Fotoanalyse",
+    videoAnalysis: "Video-Formanalyse",
+    photoText: "Foto hochladen und Körperfett-Schätzung erhalten.",
+    videoText: "Video hochladen und Form-Score erhalten.",
+    todayRecord: "Heutiger Eintrag",
+    bodyFat: "Körperfett (%)",
+    note: "Notiz",
+    save: "Speichern",
+    noData: "Noch keine Daten. Einträge erscheinen hier.",
+  },
+  ru: {
+    start: "Начать",
+    welcome1: "Для тебя.",
+    welcome2: "Вместе с тобой.",
+    subtitle: "Персональные планы, умный коучинг и отслеживание прогресса.",
+    account: "Создать аккаунт",
+    personal: "Личные данные",
+    security: "Безопасность",
+    plan: "Выбор плана",
+    dashboard: "Главная",
+    water: "Вода",
+    coach: "Коуч",
+    analysis: "Анализ",
+    progress: "Прогресс",
+    profile: "Профиль",
+    continue: "Продолжить",
+    back: "‹ Назад",
+    uploadPhoto: "Загрузить фото профиля",
+    name: "Имя и фамилия",
+    email: "E-mail",
+    phone: "Телефон",
+    age: "Возраст",
+    height: "Рост (см)",
+    weight: "Вес (кг)",
+    gender: "Пол",
+    male: "Мужчина",
+    female: "Женщина",
+    goal: "Цель",
+    fatLoss: "Снижение жира",
+    muscleGain: "Набор мышц",
+    activity: "Активность",
+    low: "Низкая",
+    moderate: "Средняя",
+    high: "Высокая",
+    faceTitle: "Face ID",
+    faceDesc: "При нажатии устройство сразу запросит распознавание лица.",
+    enableFace: "Подтвердить Face ID",
+    active: "ВКЛ",
+    off: "ВЫКЛ",
+    pin: "PIN из 4 цифр",
+    free: "Free",
+    premium: "Premium",
+    price: "249.99 TL / месяц",
+    createPlan: "Создать план",
+    stepGoal: "Цель шагов в день",
+    hello: "Привет",
+    today: "Отличный день, продолжай.",
+    calories: "Калории",
+    protein: "Белок",
+    steps: "Шаги",
+    dailyRecord: "Прогресс и дневной лог",
+    dailyRecordText: "Сохраняй вес, жир, шаги, воду и заметки.",
+    add250: "+200 мл воды",
+    ask: "Спроси что-нибудь...",
+    send: "Отправить",
+    photoAnalysis: "Фото-анализ",
+    videoAnalysis: "Видео-анализ техники",
+    photoText: "Загрузи фото и получи оценку процента жира.",
+    videoText: "Загрузи видео и получи оценку техники.",
+    todayRecord: "Запись за сегодня",
+    bodyFat: "Жир (%)",
+    note: "Заметка",
+    save: "Сохранить",
+    noData: "Данных пока нет. Записи появятся здесь.",
+  },
+};
+
+export default function HomeScreen() {
+  const [screen, setScreen] = useState<Screen>("welcome");
+  const [lang, setLang] = useState<Language>("tr");
+  const t = L[lang];
+  const { theme: appTheme, themeName, setThemeName } = useAppTheme();
+
+  const onboardingLockedScreens: Screen[] = [
+    "welcome",
+    "account",
+    "personal",
+    "plan",
+    "security",
+  ];
+
+  const onboardingTheme = THEMES.aquaCore;
+  const isOnboardingLockedScreen = onboardingLockedScreens.includes(screen);
+  const screenTheme = isOnboardingLockedScreen ? onboardingTheme : appTheme;
+  const styles = createStyles(screenTheme);
+  const theme = screenTheme;
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [analysisPhoto, setAnalysisPhoto] = useState<string | null>(null);
+  const [analysisVideo, setAnalysisVideo] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [age, setAge] = useState("");
+  const [gender, setGender] = useState("Male");
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [goal, setGoal] = useState("Fat Loss");
+  const [activityLevel, setActivityLevel] = useState("moderate");
+  const [plan, setPlan] = useState("Free");
+  const [stepGoal, setStepGoal] = useState(8000);
+
+  const [faceEnabled, setFaceEnabled] = useState(false);
+  const [pin, setPin] = useState("");
+
+  // CHANGE 1: Added isBackendLoading state (single instance)
+  const [dashboard, setDashboard] = useState<any>(null);
+  const [waterMl, setWaterMl] = useState(0);
+  const [isBackendLoading, setIsBackendLoading] = useState(false);
+
+  const [chatInput, setChatInput] = useState("");
+  const [messages, setMessages] = useState<any[]>([
+    { from: "coach", text: "Merhaba! Beslenme, su, adım, antrenman veya ilerleme hakkında yazabilirsin." },
+  ]);
+
+  const [progressWeight, setProgressWeight] = useState("");
+  const [progressFat, setProgressFat] = useState("");
+  const [progressSteps, setProgressSteps] = useState("");
+  const [progressNote, setProgressNote] = useState("");
+  const [progressLogs, setProgressLogs] = useState<any[]>([]);
+
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+
+  // CHANGE 2: Replaced post() with wait + wakeBackend + new post() (single instances)
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const wakeBackend = async () => {
+    console.log(`[WAKE BACKEND] Pinging ${API_URL}/health...`);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => {
+        console.warn(`[WAKE BACKEND] Health check timeout after 20s`);
+        controller.abort();
+      }, 2000);
+
+      const res = await fetch(`${API_URL}/health`, {
+        method: "GET",
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        console.error(`[WAKE BACKEND] Health check failed with status ${res.status}`);
+        throw new Error("Backend health check failed");
+      }
+
+      const data = await res.json();
+      console.log(`[WAKE BACKEND] Health check successful:`, data);
+      return true;
+    } catch (error: any) {
+      console.error(`[WAKE BACKEND] Failed: ${error?.message}`);
+      return false;
+    }
+  };
+
+  const post = async (endpoint: string, body: any, retries = 2) => {
+    console.log(`[POST START] Endpoint: ${endpoint}, Retries: ${retries}`);
+    setIsBackendLoading(true);
+
+    try {
+      console.log(`[POST] Waking backend...`);
+      let backendReady = await wakeBackend();
+
+      if (!backendReady) {
+        console.log(`[POST] Backend not ready, waiting 8s before retry...`);
+        await wait(1000);
+        backendReady = await wakeBackend();
+      }
+
+      if (!backendReady) {
+        console.warn(`[POST] Backend still not ready after wake attempt`);
+        throw new Error("Backend is not responding to health check");
+      }
+
+      console.log(`[POST] Backend ready, proceeding with POST to ${endpoint}`);
+      let lastError: any = null;
+
+      for (let attempt = 1; attempt <= retries + 1; attempt++) {
+        try {
+          console.log(`[POST] Attempt ${attempt}/${retries + 1}: Sending to ${endpoint}`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => {
+            console.warn(`[POST] Request timeout on attempt ${attempt} after 45s`);
+            controller.abort();
+          }, 10000);
+
+          const res = await fetch(`${API_URL}${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeout);
+
+          console.log(`[POST] Response received: status=${res.status}`);
+          const responseText = await res.text();
+          console.log(`[POST] Response body length: ${responseText.length} chars`);
+
+          if (!res.ok) {
+            console.error(`[POST] HTTP error ${res.status}: ${responseText.substring(0, 200)}`);
+            throw new Error(responseText || `HTTP ${res.status}`);
+          }
+
+          try {
+            const parsed = JSON.parse(responseText);
+            console.log(`[POST] Successfully parsed JSON response`);
+            return parsed;
+          } catch (parseErr: any) {
+            console.error(`[POST] JSON parse failed: ${parseErr?.message}`);
+            throw new Error(`Invalid JSON response: ${parseErr?.message}`);
+          }
+        } catch (err: any) {
+          lastError = err;
+          console.error(`[POST] Attempt ${attempt} failed: ${err?.message}`);
+
+          if (attempt <= retries) {
+            console.log(`[POST] Waiting 5s before retry...`);
+            await wait(5000);
+          }
+        }
+      }
+
+      console.error(`[POST] All ${retries + 1} attempts failed`);
+      throw lastError;
+    } catch (err: any) {
+      console.error(`[POST ERROR] Final error: ${err?.message}`);
+      if (err?.name === "AbortError") {
+        throw new Error("Request timeout: Backend responded too slowly. Please try again.");
+      }
+      throw new Error(err?.message || "Backend connection error.");
+    } finally {
+      setIsBackendLoading(false);
+      console.log(`[POST END] Setting loading to false`);
+    }
+  };
+
+  const get = async (endpoint: string) => {
+    const res = await fetch(`${API_URL}${endpoint}`);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log("Backend GET error:", endpoint, res.status, errorText);
+      throw new Error(errorText || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  };
+
+  const changeLang = async (next: Language) => {
+    setLang(next);
+    try {
+      await post("/language", { language: next });
+    } catch {}
+  };
+
+  const pickProfilePhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+
+    if (!result.canceled) setProfilePhoto(result.assets[0].uri);
+  };
+
+  const pickAnalysisPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setAnalysisPhoto(result.assets[0].uri);
+      const data = await post("/analyze", {
+        media_type: "photo",
+        plan,
+        language: lang,
+        note: "photo analysis",
+      });
+      setAnalysisResult(data);
+    }
+  };
+
+  const pickAnalysisVideo = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setAnalysisVideo(result.assets[0].uri);
+      const data = await post("/analyze", {
+        media_type: "video",
+        plan,
+        language: lang,
+        note: "video analysis",
+      });
+      setAnalysisResult(data);
+    }
+  };
+
+  const authenticateFace = async () => {
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+    if (!hasHardware || !isEnrolled) {
+      Alert.alert("Face ID", "Bu cihazda Face ID / biyometrik doğrulama hazır değil.");
+      return;
+    }
+
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: t.enableFace,
+      fallbackLabel: "",
+      cancelLabel: "Cancel",
+      disableDeviceFallback: true,
+    });
+
+    setFaceEnabled(result.success);
+    Alert.alert("Face ID", result.success ? t.active : t.off);
+  };
+
+  const formatLiters = (ml: number) => {
+    return (ml / 1000).toFixed(2).replace(/\.00$/, "").replace(/\.0$/, "");
+  };
+
+  const addWaterMl = async (amountMl: number) => {
+    const nextWaterMl = waterMl + amountMl;
+    console.log("ADD WATER", amountMl, "before", waterMl, "after", nextWaterMl);
+
+    try {
+      const data = await post("/water/add", { amount_ml: amountMl });
+      console.log("ADD WATER SUCCESS", amountMl, "returned", data.water_ml);
+      setWaterMl(data.water_ml);
+    } catch (error) {
+      console.log("ADD WATER FALLBACK", amountMl, "before", waterMl, "after", nextWaterMl, "error", error);
+      setWaterMl(nextWaterMl);
+    }
+  };
+
+  const createPlan = async () => {
+    try {
+      console.log(`[CREATE PLAN] Starting plan creation...`);
+
+      const payload = {
+        name: name || "Athlete",
+        email: email || "",
+        phone: phone || "",
+        age: parseInt(age) || 25,
+        gender: gender || "Male",
+        height: parseFloat(height) || 175,
+        weight: parseFloat(weight) || 80,
+        goal: goal || "Fat Loss",
+        activity_level: activityLevel || "moderate",
+        plan: plan || "Free",
+        step_goal: stepGoal || 8000,
+      };
+
+      console.log(`[CREATE PLAN] Payload ready:`, JSON.stringify(payload, null, 2));
+      console.log(`[CREATE PLAN] Calling POST /create-plan...`);
+
+      const data = await post("/create-plan", payload);
+
+      console.log(`[CREATE PLAN] SUCCESS! Response received:`, JSON.stringify(data, null, 2));
+      console.log(`[CREATE PLAN] Response type:`, typeof data);
+      console.log(`[CREATE PLAN] Dashboard data keys:`, data ? Object.keys(data) : "null");
+
+      setDashboard(data);
+      console.log(`[CREATE PLAN] Set dashboard state`);
+
+      setWaterMl(0);
+      console.log(`[CREATE PLAN] Reset water to 0`);
+
+      console.log(`[CREATE PLAN] Transitioning to theme screen...`);
+      setScreen("theme");
+      console.log(`[CREATE PLAN] Screen state changed to 'theme'`);
+
+    } catch (error: any) {
+      console.error(`[CREATE PLAN] FAILED - Error:`, error?.message);
+      console.error(`[CREATE PLAN] Full error:`, error);
+
+      Alert.alert(
+        "Bağlantı Hatası",
+        `${error?.message || "Bilinmeyen hata"}\n\n(Check console for details)`,
+        [{ text: "Tamam" }]
+      );
+    } finally {
+      setIsBackendLoading(false);
+    }
+  };
+
+  const sendChat = async () => {
+    if (!chatInput.trim()) return;
+    const userMsg = chatInput;
+    setMessages((prev) => [...prev, { from: "user", text: userMsg }]);
+    setChatInput("");
+
+    try {
+      const data = await post("/chat", { message: userMsg, language: lang });
+      setMessages((prev) => [...prev, { from: "coach", text: data.reply }]);
+    } catch (error) {
+      console.log("Chat request failed:", error);
+      setMessages((prev) => [...prev, { from: "coach", text: "..." }]);
+    }
+  };
+
+  const saveProgress = async () => {
+    if (!progressWeight || !progressFat) return;
+
+    const newLog = {
+      day_label: `${progressLogs.length + 1}. Gün`,
+      weight: Number(progressWeight),
+      body_fat: Number(progressFat),
+      steps: Number(progressSteps || 0),
+      water_ml: waterMl,
+      note: progressNote,
+    };
+
+    try {
+      const data = await post("/progress/add", newLog);
+      setProgressLogs(data.progress_logs);
+    } catch {
+      setProgressLogs((prev) => [...prev, newLog]);
+    }
+
+    setProgressWeight("");
+    setProgressFat("");
+    setProgressSteps("");
+    setProgressNote("");
+  };
+
+  const LangButton = () => (
+    <View style={styles.langMiniRow}>
+      {(["tr", "en", "de", "ru"] as Language[]).map((x) => (
+        <TouchableOpacity key={x} onPress={() => changeLang(x)}>
+          <Text style={lang === x ? styles.langMiniActive : styles.langMini}>{x.toUpperCase()}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  const BottomNav = () => (
+    <View style={[styles.bottomNav, { backgroundColor: theme.card, borderTopColor: theme.border }]}> 
+      <Nav label={t.dashboard} active={screen === "dashboard"} onPress={() => setScreen("dashboard")} theme={theme} />
+      <Nav label={t.water} active={screen === "water"} onPress={() => setScreen("water")} theme={theme} />
+      <Nav label={t.coach} active={screen === "coach"} onPress={() => setScreen("coach")} theme={theme} />
+      <Nav label={t.analysis} active={screen === "analysis"} onPress={() => setScreen("analysis")} theme={theme} />
+      <Nav label={t.profile} active={screen === "profile"} onPress={() => setScreen("profile")} theme={theme} />
+    </View>
+  );
+
+  if (screen === "welcome") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.heroCard}>
+          <View>
+            <Text style={styles.logoBlue}>AI</Text>
+            <Text style={styles.logo}>FITNESS COACH</Text>
+          </View>
+
+          <View>
+            <Text style={styles.heroTitle}>{t.welcome1}</Text>
+            <Text style={styles.heroTitle}>{t.welcome2}</Text>
+            <Text style={styles.heroSub}>{t.subtitle}</Text>
+          </View>
+
+          <View>
+            <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("account")}>
+              <Text style={styles.primaryText}>{t.start}</Text>
+            </TouchableOpacity>
+
+            <View style={styles.langRow}>
+              {(["tr", "en", "de", "ru"] as Language[]).map((x) => (
+                <TouchableOpacity key={x} style={[styles.langChip, lang === x && styles.langActive]} onPress={() => changeLang(x)}>
+                  <Text style={styles.langText}>{x.toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "account") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.page}>
+          <LangButton />
+          <Top title={t.account} step="1 / 4" back={() => setScreen("welcome")} backText={t.back} theme={theme} />
+
+          <TouchableOpacity style={styles.avatar} onPress={pickProfilePhoto}>
+            {profilePhoto ? <Image source={{ uri: profilePhoto }} style={styles.avatarImage} /> : <Text style={styles.avatarText}>👤</Text>}
+            <View style={styles.cameraBadge}><Text>📷</Text></View>
+          </TouchableOpacity>
+
+          <Text style={styles.centerHint}>{t.uploadPhoto}</Text>
+
+          <Input placeholder={t.name} value={name} setValue={setName} theme={theme} />
+          <Input placeholder={t.email} value={email} setValue={setEmail} theme={theme} />
+          <Input placeholder={t.phone} value={phone} setValue={setPhone} theme={theme} />
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("personal")}>
+            <Text style={styles.primaryText}>{t.continue}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "personal") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.page}>
+          <LangButton />
+          <Top title={t.personal} step="2 / 4" back={() => setScreen("account")} backText={t.back} theme={theme} />
+
+          <Input placeholder={t.age} value={age} setValue={setAge} keyboard="numeric" theme={theme} />
+          <Input placeholder={t.height} value={height} setValue={setHeight} keyboard="numeric" theme={theme} />
+          <Input placeholder={t.weight} value={weight} setValue={setWeight} keyboard="numeric" theme={theme} />
+
+          <Text style={styles.sectionTitle}>{t.gender}</Text>
+          <View style={styles.row}>
+            <Chip label={t.male} active={gender === "Male"} onPress={() => setGender("Male")} theme={theme} />
+            <Chip label={t.female} active={gender === "Female"} onPress={() => setGender("Female")} theme={theme} />
+          </View>
+
+          <Text style={styles.sectionTitle}>{t.goal}</Text>
+          <View style={styles.row}>
+            <Chip label={t.fatLoss} active={goal === "Fat Loss"} onPress={() => setGoal("Fat Loss")} theme={theme} />
+            <Chip label={t.muscleGain} active={goal === "Muscle Gain"} onPress={() => setGoal("Muscle Gain")} theme={theme} />
+          </View>
+
+          <Text style={styles.sectionTitle}>{t.activity}</Text>
+          <View style={styles.row}>
+            <Chip label={t.low} active={activityLevel === "low"} onPress={() => setActivityLevel("low")} theme={theme} />
+            <Chip label={t.moderate} active={activityLevel === "moderate"} onPress={() => setActivityLevel("moderate")} theme={theme} />
+            <Chip label={t.high} active={activityLevel === "high"} onPress={() => setActivityLevel("high")} theme={theme} />
+          </View>
+
+          <Text style={styles.sectionTitle}>{t.stepGoal}: {stepGoal}</Text>
+          <Slider
+            minimumValue={3000}
+            maximumValue={20000}
+            step={500}
+            value={stepGoal}
+            onValueChange={setStepGoal}
+            minimumTrackTintColor={theme.primary}
+            maximumTrackTintColor={theme.border}
+            thumbTintColor={theme.primary}
+          />
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("security")}>
+            <Text style={styles.primaryText}>{t.continue}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "security") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView contentContainerStyle={styles.page}>
+          <LangButton />
+          <Top title={t.security} step="3 / 4" back={() => setScreen("personal")} backText={t.back} theme={theme} />
+
+          <View style={styles.centerCard}>
+            <Text style={styles.faceIcon}>⌾</Text>
+            <Text style={styles.cardTitle}>{t.faceTitle}</Text>
+            <Text style={styles.cardText}>{t.faceDesc}</Text>
+          </View>
+
+          <TouchableOpacity style={styles.optionCard} onPress={authenticateFace}>
+            <Text style={styles.optionText}>{t.enableFace}</Text>
+            <Text style={faceEnabled ? styles.on : styles.off}>{faceEnabled ? t.active : t.off}</Text>
+          </TouchableOpacity>
+
+          <TextInput
+            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
+            placeholder="PIN"
+            placeholderTextColor={theme.mutedText}
+            selectionColor={theme.primary}
+            cursorColor={theme.primary}
+            value={pin}
+            onChangeText={setPin}
+            keyboardType="numeric"
+            inputMode="numeric"
+            returnKeyType="done"
+            onSubmitEditing={(e) => e.currentTarget.blur()}
+            maxLength={4}
+            secureTextEntry
+          />
+
+          <TouchableOpacity style={styles.primaryButton} onPress={() => setScreen("plan")}>
+            <Text style={styles.primaryText}>{t.continue}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "plan") {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <ScrollView 
+        contentContainerStyle={styles.page}
+        maximumZoomScale={1}
+        minimumZoomScale={1}
+        bouncesZoom={false}
+        pinchGestureEnabled={false}
+      >
+          <LangButton />
+          <Top title={t.plan} step="4 / 4" back={() => setScreen("security")} backText={t.back} theme={theme} />
+
+          <TouchableOpacity style={[styles.planCard, plan === "Free" && styles.activeCard]} onPress={() => setPlan("Free")}>
+            <Text style={styles.cardTitle}>{t.free}</Text>
+            <Text style={styles.cardText}>3 photo + 1 video / day</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.planCard, plan === "Premium" && styles.premiumCard]} onPress={() => setPlan("Premium")}>
+            <Text style={styles.cardTitle}>{t.premium}</Text>
+            <Text style={styles.price}>{t.price}</Text>
+          </TouchableOpacity>
+
+          {/* CHANGE 3: Plan button with loading state */}
+          <TouchableOpacity
+            style={[styles.primaryButton, isBackendLoading && { opacity: 0.6 }]}
+            onPress={createPlan}
+            disabled={isBackendLoading}
+          >
+            <Text style={styles.primaryText}>
+              {isBackendLoading ? "Preparing your personal plan..." : t.createPlan}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "theme") {
+    const themeOptions: Array<{ realName: import('@/src/theme/themes').ThemeName; label: string; desc: string }> = [
+      {
+        realName: "darkFuture",
+        label: "Dark Future",
+        desc: "Futuristic AI fitness look",
+      },
+      {
+        realName: "aquaCore",
+        label: "Aqua Core",
+        desc: "Clean blue health-tech look",
+      },
+      {
+        realName: "sandElite",
+        label: "Sand Elite",
+        desc: "Warm beige premium wellness",
+      },
+    ];
+
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <ScrollView contentContainerStyle={styles.page}>
+          <Text style={[styles.header, { color: theme.text }]}>
+            {lang === "tr" ? "Tema Seçimi" : lang === "en" ? "Theme Selection" : "Themenauswahl"}
+          </Text>
+
+          {themeOptions.map((item) => {
+            const isSelected = themeName === item.realName;
+
+            return (
+              <TouchableOpacity
+                key={item.realName}
+                onPress={() => {
+                  console.log(`[DEBUG] Switching theme to: ${item.realName}`);
+                  setThemeName(item.realName);
+                  setScreen("dashboard");
+                }}
+                style={[
+                  styles.planCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: isSelected ? theme.primary : theme.border,
+                    borderWidth: 2,
+                  },
+                ]}
+              >
+                <Text style={{ color: theme.text, fontSize: 18, fontWeight: "700" }}>
+                  {item.label}
+                </Text>
+
+                <Text style={{ color: theme.mutedText, marginTop: 4 }}>
+                  {item.desc}
+                </Text>
+
+                <View
+                  style={{
+                    marginTop: 10,
+                    height: 8,
+                    borderRadius: 8,
+                    backgroundColor: theme.primary,
+                    width: "60%",
+                  }}
+                />
+
+                {isSelected && (
+                  <Text style={{ color: theme.primary, marginTop: 8, fontWeight: "900" }}>
+                    ✓ Selected
+                  </Text>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: theme.primary }]}
+            onPress={() => {
+              console.log(`[DEBUG] Theme selection complete. Moving to dashboard with theme: ${themeName}`);
+              setScreen("dashboard");
+            }}
+          >
+            <Text style={styles.primaryText}>
+              {lang === "tr" ? "Devam Et" : lang === "en" ? "Continue" : "Weiter"}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "dashboard") {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+        <ScrollView 
+        contentContainerStyle={styles.pageWithNav}>
+          <LangButton />
+          <Text style={[styles.header, { color: theme.text }]}>{t.hello}, {dashboard?.name || name || "Athlete"} 👋</Text>
+          <Text style={[styles.subHeader, { color: theme.mutedText }]}>{t.today}</Text>
+
+          {/* CHANGE 4: Updated dashboard grid */}
+          <View style={styles.grid}>
+            <Stat
+              title={t.calories}
+              value={dashboard?.calories ? `${dashboard.calories} kcal` : "Not calculated yet"}
+              theme={theme}
+            />
+
+            <Stat
+              title={t.protein}
+              value={dashboard?.protein ? `${dashboard.protein} g` : "Not calculated yet"}
+              theme={theme}
+            />
+
+            <Stat
+              title={t.water}
+              value={
+                dashboard
+                  ? `${formatLiters(waterMl)} / ${formatLiters(dashboard?.water_target_ml || Math.round((dashboard?.water_liters || 2.8) * 1000))} L`
+                  : "0.0 L"
+              }
+              theme={theme}
+            />
+
+            <Stat
+              title={t.steps}
+              value={dashboard?.step_goal ? `0 / ${dashboard.step_goal}` : `0 / ${stepGoal}`}
+              theme={theme}
+            />
+          </View>
+
+          <TouchableOpacity style={[styles.actionCard, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={() => setScreen("progress")}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>{t.dailyRecord}</Text>
+            <Text style={[styles.cardText, { color: theme.mutedText }]}>{t.dailyRecordText}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.actionCard, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={() => setScreen("analysis")}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>{t.photoAnalysis} / {t.videoAnalysis}</Text>
+            <Text style={[styles.cardText, { color: theme.mutedText }]}>{t.photoText}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+        <BottomNav />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "water") {
+    // CHANGE 5: Updated water target to use water_target_ml if available
+    const targetMl = dashboard?.water_target_ml || Math.round((dashboard?.water_liters || 2.8) * 1000);
+    const percent = Math.min(100, Math.round((waterMl / targetMl) * 100));
+
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}> 
+        <ScrollView contentContainerStyle={styles.pageWithNav}>
+          <LangButton />
+          <Top title={t.water} back={() => setScreen("dashboard")} backText={t.back} theme={theme} />
+
+          <View style={[styles.waterCircle, { borderColor: theme.primary, backgroundColor: theme.card }]}> 
+            <Text style={[styles.waterBig, { color: theme.text }]}>{formatLiters(waterMl)} L</Text>
+            <Text style={[styles.cardText, { color: theme.mutedText }]}>/ {formatLiters(targetMl)} L</Text>
+            <Text style={[styles.percent, { color: theme.primary }]}>{percent}%</Text>
+          </View>
+
+          <TouchableOpacity style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={() => addWaterMl(200)}>
+            <Text style={styles.primaryText}>+200 ml</Text>
+          </TouchableOpacity>
+
+          <View style={styles.row}>
+            {[100, 200, 500].map((amount) => (
+              <TouchableOpacity key={amount} style={[styles.smallButton, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]} onPress={() => addWaterMl(amount)}>
+                <Text style={[styles.smallButtonText, { color: theme.text }]}>+{amount} ml</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+        <BottomNav />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "coach") {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}> 
+        <ScrollView contentContainerStyle={styles.pageWithNav}>
+          <LangButton />
+          <Top title={t.coach} back={() => setScreen("dashboard")} backText={t.back} theme={theme} />
+
+          {messages.map((msg, i) => (
+            <View key={i} style={[msg.from === "user" ? styles.userBubble : styles.coachBubble, { backgroundColor: msg.from === "user" ? theme.primary : theme.card, borderColor: theme.border, borderWidth: 1 }]}>
+              <Text style={[styles.bubbleText, { color: theme.text }]}>{msg.text}</Text>
+            </View>
+          ))}
+
+          <View style={styles.chatInputRow}>
+           <TextInput
+            style={[
+              styles.chatInput,
+              {
+                backgroundColor: theme.card,
+                color: theme.text,
+                borderColor: theme.border,
+              },
+            ]}
+           placeholder={t.ask}
+           placeholderTextColor={theme.mutedText}
+           selectionColor={theme.primary}
+           cursorColor={theme.primary}
+           value={chatInput}
+           onChangeText={setChatInput}
+/>
+            <TouchableOpacity style={[styles.sendButton, { backgroundColor: theme.primary }]} onPress={sendChat}>
+              <Text style={styles.primaryText}>➤</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+        <BottomNav />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "analysis") {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}> 
+        <ScrollView contentContainerStyle={styles.pageWithNav}>
+          <LangButton />
+          <Top title={t.analysis} back={() => setScreen("dashboard")} backText={t.back} theme={theme} />
+
+          <TouchableOpacity style={[styles.planCard, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={pickAnalysisPhoto}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>{t.photoAnalysis}</Text>
+            <Text style={[styles.cardText, { color: theme.mutedText }]}>{t.photoText}</Text>
+          </TouchableOpacity>
+
+          {analysisPhoto && (
+            <View style={styles.imageWrap}>
+              <Image source={{ uri: analysisPhoto }} style={styles.analysisImage} />
+              {analysisResult?.effect_label && (
+                <View style={[styles.effectBadge, { backgroundColor: theme.primary }]}>
+                  <Text style={styles.effectText}>{analysisResult.effect_label}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          <TouchableOpacity style={[styles.planCard, { backgroundColor: theme.card, borderColor: theme.border }]} onPress={pickAnalysisVideo}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>{t.videoAnalysis}</Text>
+            <Text style={[styles.cardText, { color: theme.mutedText }]}>{t.videoText}</Text>
+          </TouchableOpacity>
+
+          {analysisVideo && <Text style={[styles.limitText, { color: theme.primary }]}>Video selected ✅</Text>}
+
+          {analysisResult?.advice && (
+            <View style={[styles.actionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+              <Text style={[styles.cardTitle, { color: theme.text }]}>{t.analysis}</Text>
+              <Text style={[styles.cardText, { color: theme.mutedText }]}>{analysisResult.advice}</Text>
+            </View>
+          )}
+        </ScrollView>
+        <BottomNav />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === "progress") {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}> 
+        <ScrollView contentContainerStyle={styles.pageWithNav}>
+          <LangButton />
+          <Top title={t.progress} back={() => setScreen("dashboard")} backText={t.back} theme={theme} />
+
+          <View style={[styles.planCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>{t.todayRecord}</Text>
+            <Input placeholder={t.weight} value={progressWeight} setValue={setProgressWeight} keyboard="numeric" theme={theme} />
+            <Input placeholder={t.bodyFat} value={progressFat} setValue={setProgressFat} keyboard="numeric" theme={theme} />
+            <Input placeholder={t.steps} value={progressSteps} setValue={setProgressSteps} keyboard="numeric" theme={theme} />
+            <Input placeholder={t.note} value={progressNote} setValue={setProgressNote} theme={theme} />
+            <TouchableOpacity style={[styles.primaryButton, { backgroundColor: theme.primary }]} onPress={saveProgress}>
+              <Text style={styles.primaryText}>{t.save}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {progressLogs.length === 0 ? (
+            <Text style={[styles.cardText, { color: theme.mutedText }]}>{t.noData}</Text>
+          ) : (
+            progressLogs.map((log, i) => (
+              <View key={i} style={[styles.chartCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <Text style={[styles.cardTitle, { color: theme.text }]}>{log.day_label}</Text>
+                <Text style={[styles.chartLine, { color: theme.text }]}>{t.weight}: {log.weight} kg</Text>
+                <Text style={[styles.chartLine, { color: theme.text }]}>{t.bodyFat}: %{log.body_fat}</Text>
+                <Text style={[styles.chartLine, { color: theme.text }]}>{t.steps}: {log.steps}</Text>
+                <Text style={[styles.chartLine, { color: theme.text }]}>{t.water}: {log.water_ml} ml</Text>
+                {!!log.note && <Text style={[styles.cardText, { color: theme.mutedText }]}>{log.note}</Text>}
+              </View>
+            ))
+          )}
+        </ScrollView>
+        <BottomNav />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}> 
+      <ScrollView contentContainerStyle={styles.pageWithNav}>
+        <LangButton />
+        <Top title={t.profile} back={() => setScreen("dashboard")} backText={t.back} theme={theme} />
+
+        <View style={[styles.centerCard, { backgroundColor: theme.card, borderColor: theme.border }]}> 
+          {profilePhoto ? <Image source={{ uri: profilePhoto }} style={styles.avatarImageLarge} /> : <Text style={[styles.avatarText, { color: theme.text }]}>👤</Text>}
+          <Text style={[styles.cardTitle, { color: theme.text }]}>{name || "Athlete"}</Text>
+          <Text style={[styles.cardText, { color: theme.mutedText }]}>{email || "No email"}</Text>
+          <Text style={[styles.price, { color: theme.primary }]}>{plan}</Text>
+        </View>
+      </ScrollView>
+      <BottomNav />
+    </SafeAreaView>
+  );
+}
+
+function Top({ title, step, back, backText, theme }: any) {
+  const safeTheme = theme ?? THEMES.aquaCore;
+
+  return (
+    <View>
+      <TouchableOpacity onPress={back}>
+        <Text style={[styles.back, { color: safeTheme.primary }]}>{backText}</Text>
+      </TouchableOpacity>
+      <Text style={[styles.headerCenter, { color: safeTheme.text }]}>{title}</Text>
+      {step && <Text style={[styles.step, { color: safeTheme.primary }]}>{step}</Text>}
+    </View>
+  );
+}
+
+function Input({ placeholder, value, setValue, keyboard = "default", theme }: any) {
+  const safeTheme = theme ?? THEMES.aquaCore;
+
+  return (
+    <TextInput
+      style={[styles.input, { backgroundColor: safeTheme.card, borderColor: safeTheme.border, color: safeTheme.text }]}
+      placeholder={placeholder}
+      placeholderTextColor={safeTheme.mutedText}
+      selectionColor={safeTheme.primary}
+      cursorColor={safeTheme.primary}
+      value={value}
+      onChangeText={setValue}
+      keyboardType={keyboard}
+    />
+  );
+}
+
+function Chip({ label, active, onPress, theme }: any) {
+  const safeTheme = theme ?? THEMES.aquaCore;
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.chip,
+        { backgroundColor: active ? safeTheme.primary : safeTheme.card, borderColor: active ? safeTheme.primary : safeTheme.border },
+        active && styles.chipActive,
+      ]}
+      onPress={onPress}
+    >
+      <Text style={[active ? styles.chipActiveText : styles.chipText, { color: active ? safeTheme.text : safeTheme.mutedText }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function Stat({ title, value, theme }: any) {
+  const safeTheme = theme ?? THEMES.aquaCore;
+
+  return (
+    <View style={[styles.statCard, { backgroundColor: safeTheme.card, borderColor: safeTheme.border }]}> 
+      <Text style={[styles.statTitle, { color: safeTheme.mutedText }]}>{title}</Text>
+      <Text style={[styles.statValue, { color: safeTheme.text }]}>{value}</Text>
+    </View>
+  );
+}
+
+function Nav({ label, active, onPress, theme }: any) {
+  const safeTheme = theme ?? THEMES.aquaCore;
+
+  return (
+    <TouchableOpacity onPress={onPress}>
+      <Text style={[active ? styles.navActive : styles.navText, { color: active ? safeTheme.primary : safeTheme.mutedText }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const createStyles = (theme: AppTheme) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: theme.background },
+  page: { padding: 24, paddingBottom: 40 },
+  pageWithNav: { padding: 24, paddingBottom: 130 },
+
+  heroCard: {
+    flex: 1,
+    backgroundColor: theme.card,
+    margin: 18,
+    padding: 26,
+    borderRadius: 28,
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+
+  logoBlue: { color: theme.primary, fontSize: 56, fontWeight: "900" },
+  logo: { color: theme.text, fontSize: 42, fontWeight: "900" },
+  heroTitle: { color: theme.text, fontSize: 34, fontWeight: "900", marginBottom: 6 },
+  heroSub: { color: theme.mutedText, fontSize: 17, lineHeight: 26, marginTop: 16 },
+
+  langRow: { flexDirection: "row", gap: 10, marginTop: 18 },
+  langChip: { backgroundColor: theme.card, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: theme.border },
+  langActive: { borderWidth: 1, borderColor: theme.primary },
+  langText: { color: theme.text, fontWeight: "900" },
+
+  langMiniRow: { flexDirection: "row", justifyContent: "flex-end", gap: 10, marginBottom: 8 },
+  langMini: { color: theme.mutedText, fontWeight: "800" },
+  langMiniActive: { color: theme.primary, fontWeight: "900" },
+
+  header: { color: theme.text, fontSize: 30, fontWeight: "900" },
+  headerCenter: { color: theme.text, fontSize: 28, fontWeight: "900", textAlign: "center", marginBottom: 20 },
+  subHeader: { color: theme.mutedText, fontSize: 16, marginTop: 6, marginBottom: 24 },
+  back: { color: theme.primary, fontSize: 18, marginBottom: 12 },
+  step: { color: theme.primary, textAlign: "center", marginBottom: 20, fontSize: 20 },
+
+  input: {
+    backgroundColor: theme.card,
+    color: theme.text,
+    padding: 18,
+    borderRadius: 18,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: theme.border,
+    fontSize: 16,
+  },
+
+  primaryButton: {
+    backgroundColor: theme.primary,
+    padding: 18,
+    borderRadius: 18,
+    alignItems: "center",
+    marginTop: 18,
+  },
+  primaryText: { color: theme.text, fontSize: 18, fontWeight: "900" },
+
+  avatar: {
+    alignSelf: "center",
+    width: 130,
+    height: 130,
+    backgroundColor: theme.card,
+    borderRadius: 65,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  avatarImage: { width: 130, height: 130, borderRadius: 65 },
+  avatarImageLarge: { width: 140, height: 140, borderRadius: 70, marginBottom: 18 },
+  avatarText: { fontSize: 46, color: theme.text },
+  cameraBadge: { position: "absolute", right: 0, bottom: 8, backgroundColor: theme.primary, padding: 10, borderRadius: 20 },
+  centerHint: { color: theme.mutedText, textAlign: "center", marginBottom: 20 },
+
+  sectionTitle: { color: theme.text, fontSize: 20, fontWeight: "900", marginTop: 20, marginBottom: 12 },
+  row: { flexDirection: "row", gap: 10, marginBottom: 10, flexWrap: "wrap" },
+
+  chip: {
+    backgroundColor: theme.card,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  chipActive: { borderColor: theme.primary, backgroundColor: theme.primary },
+  chipText: { color: theme.mutedText, fontWeight: "700" },
+  chipActiveText: { color: theme.text, fontWeight: "900" },
+
+  centerCard: {
+    backgroundColor: theme.card,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+
+  faceIcon: { color: theme.primary, fontSize: 52, marginBottom: 10 },
+  optionCard: {
+    backgroundColor: theme.card,
+    borderRadius: 18,
+    padding: 18,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  optionText: { color: theme.text, fontSize: 16, fontWeight: "800" },
+  on: { color: theme.primary, fontWeight: "900" },
+  off: { color: theme.mutedText, fontWeight: "900" },
+
+  planCard: {
+    backgroundColor: theme.card,
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  activeCard: { borderColor: theme.primary },
+  premiumCard: { borderColor: theme.secondary, backgroundColor: theme.cardSoft },
+  cardTitle: { color: theme.text, fontSize: 24, fontWeight: "900", marginBottom: 8 },
+  price: { color: theme.primary, fontSize: 18, fontWeight: "900", marginBottom: 8 },
+  cardText: { color: theme.mutedText, fontSize: 16, lineHeight: 24 },
+  limitText: { color: theme.primary, fontWeight: "800", marginTop: 10 },
+
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  statCard: {
+    width: "48%",
+    backgroundColor: theme.card,
+    padding: 18,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  statTitle: { color: theme.mutedText, fontSize: 14 },
+  statValue: { color: theme.text, fontSize: 20, fontWeight: "900", marginTop: 8 },
+
+  actionCard: {
+    backgroundColor: theme.card,
+    borderRadius: 22,
+    padding: 20,
+    marginTop: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+
+  waterCircle: {
+    height: 260,
+    borderRadius: 130,
+    borderWidth: 14,
+    borderColor: theme.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 30,
+  },
+  waterBig: { color: theme.text, fontSize: 46, fontWeight: "900" },
+  percent: { color: theme.primary, fontSize: 22, fontWeight: "900", marginTop: 8 },
+  smallButton: { flex: 1, backgroundColor: theme.card, padding: 16, borderRadius: 16, alignItems: "center" },
+  smallButtonText: { color: theme.text, fontWeight: "900" },
+
+  coachBubble: {
+    backgroundColor: theme.card,
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+    alignSelf: "flex-start",
+    maxWidth: "82%",
+  },
+  userBubble: {
+    backgroundColor: theme.primary,
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+    alignSelf: "flex-end",
+    maxWidth: "82%",
+  },
+  bubbleText: { color: theme.text, fontSize: 16, lineHeight: 23 },
+  chatInputRow: { flexDirection: "row", gap: 10, marginTop: 18 },
+  chatInput: { flex: 1, backgroundColor: theme.card, color: theme.text, padding: 16, borderRadius: 18 },
+  sendButton: { backgroundColor: theme.primary, width: 56, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+
+  chartCard: {
+    backgroundColor: theme.card,
+    borderRadius: 22,
+    padding: 20,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  chartLine: { color: theme.text, fontSize: 18, fontWeight: "800", marginTop: 8 },
+
+  imageWrap: { marginBottom: 18 },
+  analysisImage: { width: "100%", height: 320, borderRadius: 24 },
+  effectBadge: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    backgroundColor: theme.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+  },
+  effectText: { color: theme.text, fontWeight: "900" },
+
+  bottomNav: {
+    position: "absolute",
+    bottom: 56,
+    left: 0,
+    right: 0,
+    backgroundColor: theme.card,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  navText: { fontWeight: "800" },
+  navActive: { fontWeight: "900" },
+});
+
+const styles = createStyles(THEMES.aquaCore);

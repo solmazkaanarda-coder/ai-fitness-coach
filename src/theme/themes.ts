@@ -1,4 +1,4 @@
-export type ThemeName = 'aquaCore' | 'sandElite' | 'darkFuture' | 'roseGlow';
+export type ThemeName = 'aquaCore' | 'sandElite' | 'darkFuture' | 'roseGlow' | 'premiumAthlete';
 
 export type AppTheme = {
   primary: string;
@@ -9,6 +9,12 @@ export type AppTheme = {
   text: string;
   mutedText: string;
   border: string;
+  // Premium accent colors
+  successColor?: string;
+  calorieColor?: string;
+  proteinColor?: string;
+  waterColor?: string;
+  progressColor?: string;
 };
 
 export const THEMES: Record<ThemeName, AppTheme> = {
@@ -51,5 +57,21 @@ export const THEMES: Record<ThemeName, AppTheme> = {
     text: '#2A1020',
     mutedText: '#9B6A80',
     border: '#FF4FA3',
+  },
+  premiumAthlete: {
+    primary: '#2F9BFF',
+    secondary: '#6EC6FF',
+    background: '#0F1117',
+    card: '#1A1E27',
+    cardSoft: '#242A35',
+    text: '#FFFFFF',
+    mutedText: '#A8AFBB',
+    border: '#2A3038',
+    // Premium accent colors
+    successColor: '#A4D65E',
+    calorieColor: '#F4A860',
+    proteinColor: '#7FE4D9',
+    waterColor: '#60B4FF',
+    progressColor: '#D4A5FF',
   },
 };
